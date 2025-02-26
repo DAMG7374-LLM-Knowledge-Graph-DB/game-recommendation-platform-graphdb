@@ -1,0 +1,65 @@
+import os
+import csv
+import json
+import time
+import requests
+from dotenv import load_dotenv
+
+# Load API Key
+load_dotenv()
+RAWG_API_KEY = os.getenv("RAWG_API_KEY")
+RAWG_URL = "https://api.rawg.io/api/games"
+CSV_FILE = "data/rawg_game_data.csv"
+
+# Fetch Data from RAWG
+def fetch_rawg_games():
+    page = 1
+    max_pages = 10
+    all_games = []
+
+    while page <= max_pages:
+        print(f"Fetching RAWG games, page {page}...")
+        params = {"key": RAWG_API_KEY, "page": page, "page_size": 40}
+        response = requests.get(RAWG_URL, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            all_games.extend(parse_game_data(data["results"]))
+            time.sleep(1.5)
+        else:
+            print(f"❌ RAWG Fetch Error: {response.status_code} - {response.text}")
+            time.sleep(5)
+
+        page += 1
+
+    save_to_csv(all_games, CSV_FILE)
+    print(f"✅ RAWG Data Saved: {CSV_FILE}")
+
+# Parse API Data Based on Graph Model
+def parse_game_data(games):
+    parsed = []
+    for game in games:
+        parsed.append({
+            "id": game.get("id"),
+            "name": game.get("name"),
+            "released": game.get("released"),
+            "genres": ", ".join(g["name"] for g in game.get("genres", [])),
+            "platforms": ", ".join(p["platform"]["name"] for p in game.get("platforms", [])),
+            "developers": ", ".join(d["name"] for d in game.get("developers", [])) if game.get("developers") else "",
+            "publishers": ", ".join(p["name"] for p in game.get("publishers", [])) if game.get("publishers") else "",
+            "background_image": game.get("background_image"),
+            "rating": game.get("rating"),
+            "description": game.get("description")
+        })
+    return parsed
+
+# Save to CSV
+def save_to_csv(data, filename):
+    keys = ["id", "name", "released", "genres", "platforms", "developers", "publishers", "background_image", "rating", "description"]
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(data)
+
+if __name__ == "__main__":
+    fetch_rawg_games()

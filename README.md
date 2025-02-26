@@ -14,4 +14,3 @@
 
 # Output
     Find the dataset in data/ folder; latest_game_data.csv and rawg_game_data.csv
-# game-recommendation-platform-graphdb
